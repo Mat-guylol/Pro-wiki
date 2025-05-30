@@ -3,38 +3,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>MiniWiki</title>
+  <title>MiniWiki Pro</title>
   <style>
     body {
       margin: 0;
-      font-family: sans-serif;
-      background: #f0f0f0;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
       color: #333;
       display: flex;
-      height: 100vh;
       flex-direction: column;
+      height: 100vh;
     }
     header {
-      background: #007acc;
+      background: #0078d4;
       color: white;
       padding: 1rem;
-      font-size: 1.5rem;
       display: flex;
       justify-content: space-between;
+      align-items: center;
     }
-    main {
+    #main {
       flex: 1;
       display: flex;
       overflow: hidden;
     }
     #sidebar {
-      width: 250px;
+      width: 260px;
       background: #fff;
       border-right: 1px solid #ccc;
       overflow-y: auto;
       padding: 1rem;
     }
-    #sidebar button {
+    #sidebar h3 {
+      margin-top: 0;
+    }
+    #sidebar button, #authForm button {
       display: block;
       width: 100%;
       margin-bottom: 0.5rem;
@@ -43,9 +46,10 @@
       border: none;
       text-align: left;
       cursor: pointer;
+      border-radius: 4px;
     }
     #sidebar button.active {
-      background: #007acc;
+      background: #0078d4;
       color: white;
     }
     #editor {
@@ -62,6 +66,7 @@
       font-family: monospace;
       font-size: 1rem;
       border: 1px solid #ccc;
+      border-radius: 4px;
       margin-bottom: 1rem;
     }
     #preview {
@@ -69,99 +74,220 @@
       overflow-y: auto;
       padding: 1rem;
       border: 1px solid #ccc;
-      background: #f9f9f9;
+      border-radius: 4px;
+      background: #fafafa;
     }
     #controls {
       display: flex;
       gap: 0.5rem;
+      margin-bottom: 0.5rem;
     }
-    #controls button {
-      padding: 0.5rem 1rem;
+    #controls input, #authForm input {
+      padding: 0.5rem;
+      flex: 1;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    #authForm {
+      max-width: 400px;
+      margin: auto;
+      padding: 2rem;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+    #authForm h2 {
+      text-align: center;
+    }
+    #authToggle {
+      margin-top: 1rem;
+      text-align: center;
+      cursor: pointer;
+      color: #0078d4;
+    }
+    .section-label {
+      margin: 1rem 0 0.5rem;
+      font-weight: bold;
+    }
+    .dark {
+      background: #1e1e1e;
+      color: #ccc;
+    }
+    .dark header {
+      background: #005a9e;
+    }
+    .dark #sidebar {
+      background: #2e2e2e;
+      border-color: #444;
+    }
+    .dark #editor, .dark #preview {
+      background: #333;
+      border-color: #555;
+    }
+    .dark #sidebar button {
+      background: #444;
+      color: #ccc;
+    }
+    .dark #sidebar button.active {
+      background: #005a9e;
+      color: white;
     }
   </style>
 </head>
 <body>
   <header>
-    <span>MiniWiki</span>
-    <button onclick="addPage()">+ New Page</button>
+    <span>MiniWiki Pro</span>
+    <div>
+      <button onclick="toggleTheme()">🌓</button>
+      <button onclick="logout()">Logout</button>
+    </div>
   </header>
-  <main>
-    <div id="sidebar"></div>
+  <div id="main" style="display: none;">
+    <div id="sidebar">
+      <h3>My Pages</h3>
+      <button onclick="newPage()">+ New Page</button>
+      <div id="pageList"></div>
+    </div>
     <div id="editor">
+      <div class="section-label">Page Title</div>
       <div id="controls">
-        <input type="text" id="pageTitle" placeholder="Page Title" />
+        <input type="text" id="pageTitle" placeholder="Title" />
         <button onclick="savePage()">Save</button>
         <button onclick="deletePage()">Delete</button>
       </div>
-      <textarea id="pageContent" placeholder="Write your content in markdown..."></textarea>
+      <div class="section-label">Markdown Content</div>
+      <textarea id="pageContent" placeholder="Type Markdown here..."></textarea>
+      <div class="section-label">Live Preview</div>
       <div id="preview"></div>
     </div>
-  </main>
+  </div>
+  <form id="authForm">
+    <h2>Login or Register</h2>
+    <input type="text" id="authUser" placeholder="Username" required />
+    <input type="password" id="authPass" placeholder="Password" required />
+    <button type="submit">Enter</button>
+    <div id="authToggle" onclick="toggleAuth()">Switch to Register</div>
+  </form>
   <script>
-    let pages = JSON.parse(localStorage.getItem("miniwiki_pages") || '{}');
-    let current = null;
+    let users = JSON.parse(localStorage.getItem('wiki_users') || '{}');
+    let pages = JSON.parse(localStorage.getItem('wiki_pages') || '{}');
+    let mode = localStorage.getItem('theme') || 'light';
+    let currentUser = localStorage.getItem('wiki_user');
+    let currentPage = null;
+    let isRegister = false;
 
-    function renderSidebar() {
-      const sidebar = document.getElementById("sidebar");
-      sidebar.innerHTML = "";
-      Object.keys(pages).forEach(title => {
-        const btn = document.createElement("button");
+    if (mode === 'dark') document.body.classList.add('dark');
+    
+    function savePages() {
+      localStorage.setItem('wiki_pages', JSON.stringify(pages));
+    }
+
+    function saveUsers() {
+      localStorage.setItem('wiki_users', JSON.stringify(users));
+    }
+
+    function toggleTheme() {
+      document.body.classList.toggle('dark');
+      localStorage.setItem('theme', document.body.classList.contains('dark') ? 'dark' : 'light');
+    }
+
+    function renderPages() {
+      const list = document.getElementById('pageList');
+      list.innerHTML = '';
+      const userPages = pages[currentUser] || {};
+      Object.keys(userPages).forEach(title => {
+        const btn = document.createElement('button');
         btn.textContent = title;
-        if (title === current) btn.classList.add("active");
+        if (title === currentPage) btn.classList.add('active');
         btn.onclick = () => loadPage(title);
-        sidebar.appendChild(btn);
+        list.appendChild(btn);
       });
     }
 
-    function loadPage(title) {
-      current = title;
-      document.getElementById("pageTitle").value = title;
-      document.getElementById("pageContent").value = pages[title];
-      renderSidebar();
-      renderPreview();
+    function newPage() {
+      document.getElementById('pageTitle').value = '';
+      document.getElementById('pageContent').value = '';
+      document.getElementById('preview').innerHTML = '';
+      currentPage = null;
     }
 
     function savePage() {
-      const title = document.getElementById("pageTitle").value.trim();
-      const content = document.getElementById("pageContent").value;
-      if (!title) return alert("Title is required");
-      pages[title] = content;
-      localStorage.setItem("miniwiki_pages", JSON.stringify(pages));
-      current = title;
-      renderSidebar();
+      const title = document.getElementById('pageTitle').value.trim();
+      const content = document.getElementById('pageContent').value;
+      if (!title) return alert('Title required');
+      if (!pages[currentUser]) pages[currentUser] = {};
+      pages[currentUser][title] = content;
+      currentPage = title;
+      savePages();
+      renderPages();
       renderPreview();
     }
 
     function deletePage() {
-      if (!current) return;
-      if (!confirm("Delete this page?")) return;
-      delete pages[current];
-      localStorage.setItem("miniwiki_pages", JSON.stringify(pages));
-      current = null;
-      document.getElementById("pageTitle").value = "";
-      document.getElementById("pageContent").value = "";
-      document.getElementById("preview").innerHTML = "";
-      renderSidebar();
+      if (!currentPage || !confirm('Delete page?')) return;
+      delete pages[currentUser][currentPage];
+      savePages();
+      currentPage = null;
+      newPage();
+      renderPages();
     }
 
-    function addPage() {
-      document.getElementById("pageTitle").value = "";
-      document.getElementById("pageContent").value = "";
-      current = null;
+    function loadPage(title) {
+      currentPage = title;
+      document.getElementById('pageTitle').value = title;
+      document.getElementById('pageContent').value = pages[currentUser][title];
+      renderPreview();
+      renderPages();
     }
 
     function renderPreview() {
-      let text = document.getElementById("pageContent").value;
-      text = text.replace(/\n/g, "<br>")
-                 .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                 .replace(/\*(.*?)\*/g, "<em>$1</em>")
-                 .replace(/\`(.*?)\`/g, "<code>$1</code>");
-      document.getElementById("preview").innerHTML = text;
+      let text = document.getElementById('pageContent').value;
+      text = text.replace(/\n/g, '<br>')
+                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                 .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                 .replace(/\`(.*?)\`/g, '<code>$1</code>');
+      document.getElementById('preview').innerHTML = text;
     }
 
-    document.getElementById("pageContent").addEventListener("input", renderPreview);
+    document.getElementById('pageContent').addEventListener('input', renderPreview);
 
-    renderSidebar();
+    document.getElementById('authForm').addEventListener('submit', e => {
+      e.preventDefault();
+      const u = document.getElementById('authUser').value.trim();
+      const p = document.getElementById('authPass').value;
+      if (!u || !p) return alert('Fill both fields');
+      if (isRegister) {
+        if (users[u]) return alert('Username taken');
+        users[u] = p;
+        saveUsers();
+        alert('Registered! You can now log in.');
+        toggleAuth();
+      } else {
+        if (!users[u] || users[u] !== p) return alert('Invalid login');
+        currentUser = u;
+        localStorage.setItem('wiki_user', u);
+        document.getElementById('authForm').style.display = 'none';
+        document.getElementById('main').style.display = 'flex';
+        renderPages();
+      }
+    });
+
+    function logout() {
+      localStorage.removeItem('wiki_user');
+      location.reload();
+    }
+
+    function toggleAuth() {
+      isRegister = !isRegister;
+      document.getElementById('authToggle').textContent = isRegister ? 'Switch to Login' : 'Switch to Register';
+    }
+
+    if (currentUser && users[currentUser]) {
+      document.getElementById('authForm').style.display = 'none';
+      document.getElementById('main').style.display = 'flex';
+      renderPages();
+    }
   </script>
 </body>
 </html>
