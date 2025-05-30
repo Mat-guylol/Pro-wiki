@@ -1,823 +1,167 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Pro Wiki - Advanced Editable Wiki</title>
-<style>
-  /* Basic Reset & Styling */
-  body {
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    background: #f9f9f9;
-    color: #222;
-    margin: 0; padding: 0;
-    display: flex; flex-direction: column; height: 100vh;
-  }
-  header {
-    background: #0078d4;
-    color: white;
-    padding: 1rem 2rem;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  header h1 { margin: 0; font-weight: 700; font-size: 1.5rem; }
-  #logoutBtn {
-    background: #005a9e;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    font-weight: 600;
-    border-radius: 4px;
-    cursor: pointer;
-    display: none;
-  }
-  #logoutBtn:hover { background: #004477; }
-  main {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-  #sidebar {
-    width: 280px;
-    border-right: 1px solid #ddd;
-    display: flex;
-    flex-direction: column;
-    background: white;
-  }
-  #sidebar header {
-    padding: 1rem;
-    border-bottom: 1px solid #ddd;
-    font-weight: 700;
-    font-size: 1.1rem;
-  }
-  #searchInput {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-bottom: 1px solid #ddd;
-    font-size: 1rem;
-    outline-offset: 2px;
-  }
-  #pageList {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0.5rem;
-  }
-  #pageList button.pageItem {
-    width: 100%;
-    background: none;
-    border: none;
-    padding: 0.5rem 1rem;
-    text-align: left;
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: 1rem;
-    margin-bottom: 0.25rem;
-    transition: background-color 0.2s;
-  }
-  #pageList button.pageItem:hover {
-    background: #0078d4;
-    color: white;
-  }
-  #pageList button.pageItem.active {
-    background: #005a9e;
-    color: white;
-    font-weight: 700;
-  }
-  #btnNewPage {
-    margin: 0.75rem 1rem;
-    padding: 0.6rem 1rem;
-    font-size: 1rem;
-    background: #28a745;
-    border: none;
-    color: white;
-    font-weight: 700;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-  }
-  #btnNewPage:disabled {
-    background: #aaa;
-    cursor: not-allowed;
-  }
-  #btnNewPage:hover:not(:disabled) {
-    background: #218838;
-  }
-
-  /* Content area */
-  #contentArea {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background: white;
-  }
-  #pageTitle {
-    font-size: 2rem;
-    font-weight: 700;
-    margin: 1rem 1.5rem 0.5rem;
-  }
-  #pageContent {
-    flex: 1;
-    margin: 0 1.5rem 1rem;
-    overflow-y: auto;
-    line-height: 1.5;
-    font-size: 1.1rem;
-  }
-  #editPageBtn {
-    align-self: flex-start;
-    margin: 0 1.5rem 1rem;
-    padding: 0.5rem 1rem;
-    background: #0078d4;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  #editPageBtn:hover {
-    background: #005a9e;
-  }
-
-  /* Modal styles */
-  .modal {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.4);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-  }
-  .modal.active {
-    display: flex;
-  }
-  .modal-content {
-    background: white;
-    max-width: 600px;
-    width: 90%;
-    max-height: 90vh;
-    overflow-y: auto;
-    border-radius: 8px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
-    padding: 1rem 1.5rem 1.5rem;
-    display: flex;
-    flex-direction: column;
-  }
-  .modal-content h2 {
-    margin-top: 0;
-    font-weight: 700;
-  }
-  textarea#editorTextArea {
-    width: 100%;
-    min-height: 250px;
-    font-family: monospace;
-    font-size: 1rem;
-    margin-top: 0.5rem;
-    padding: 0.75rem;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    resize: vertical;
-    box-sizing: border-box;
-  }
-  #editorPreview {
-    margin-top: 1rem;
-    padding: 0.75rem;
-    background: #f3f3f3;
-    border-radius: 6px;
-    border: 1px solid #ddd;
-    overflow-y: auto;
-    max-height: 150px;
-  }
-  .modal-buttons {
-    margin-top: 1rem;
-    display: flex;
-    justify-content: flex-end;
-    gap: 1rem;
-  }
-  button {
-    cursor: pointer;
-    font-weight: 700;
-  }
-  button:disabled {
-    cursor: not-allowed;
-    opacity: 0.6;
-  }
-  #btnSave {
-    background: #28a745;
-    border: none;
-    padding: 0.6rem 1.2rem;
-    color: white;
-    border-radius: 4px;
-  }
-  #btnSave:hover:not(:disabled) {
-    background: #218838;
-  }
-  #btnCancel {
-    background: #ccc;
-    border: none;
-    padding: 0.6rem 1.2rem;
-    border-radius: 4px;
-  }
-  #btnCancel:hover {
-    background: #bbb;
-  }
-
-  /* Login/Register modals input styles */
-  input[type="text"], input[type="password"] {
-    width: 100%;
-    margin-top: 0.5rem;
-    padding: 0.5rem 0.75rem;
-    font-size: 1rem;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-    box-sizing: border-box;
-  }
-  label {
-    margin-top: 1rem;
-    font-weight: 600;
-  }
-  .error-message {
-    color: #cc0000;
-    margin-top: 0.5rem;
-    font-size: 0.9rem;
-  }
-  .link-toggle {
-    margin-top: 1rem;
-    text-align: center;
-    color: #0078d4;
-    cursor: pointer;
-    user-select: none;
-    font-weight: 600;
-  }
-  .link-toggle:hover {
-    text-decoration: underline;
-  }
-
-  /* Toast notifications */
-  #toast {
-    position: fixed;
-    bottom: 1rem;
-    right: 1rem;
-    background: #0078d4;
-    color: white;
-    padding: 0.75rem 1.25rem;
-    border-radius: 6px;
-    font-weight: 700;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.4s ease;
-    z-index: 10000;
-    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
-  }
-  #toast.info { background: #0078d4; }
-  #toast.error { background: #cc0000; }
-  #toast.success { background: #28a745; }
-
-  /* Dark Mode */
-  body.dark-mode {
-    background: #1e1e1e;
-    color: #ddd;
-  }
-  body.dark-mode header {
-    background: #0a62b7;
-  }
-  body.dark-mode #sidebar {
-    background: #252525;
-    border-right: 1px solid #444;
-  }
-  body.dark-mode #pageList button.pageItem {
-    color: #ddd;
-  }
-  body.dark-mode #pageList button.pageItem:hover {
-    background: #0a62b7;
-    color: white;
-  }
-  body.dark-mode #pageList button.pageItem.active {
-    background: #054a8b;
-    color: white;
-  }
-  body.dark-mode #contentArea {
-    background: #222;
-  }
-  body.dark-mode #pageContent {
-    color: #ddd;
-  }
-  body.dark-mode textarea#editorTextArea {
-    background: #333;
-    border: 1px solid #555;
-    color: #ddd;
-  }
-  body.dark-mode #editorPreview {
-    background: #2a2a2a;
-    border: 1px solid #444;
-    color: #ddd;
-  }
-  body.dark-mode input[type="text"], body.dark-mode input[type="password"] {
-    background: #333;
-    border: 1px solid #555;
-    color: #ddd;
-  }
-  body.dark-mode #btnNewPage {
-    background: #1a7e1a;
-  }
-  body.dark-mode #btnNewPage:hover:not(:disabled) {
-    background: #166616;
-  }
-  body.dark-mode #editPageBtn {
-    background: #0a62b7;
-  }
-  body.dark-mode #editPageBtn:hover {
-    background: #054a8b;
-  }
-  body.dark-mode #toast.info { background: #0a62b7; }
-  body.dark-mode #toast.error { background: #cc3333; }
-  body.dark-mode #toast.success { background: #2a9d2a; }
-
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MiniWiki</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #f0f0f0;
+      color: #333;
+      display: flex;
+      height: 100vh;
+      flex-direction: column;
+    }
+    header {
+      background: #007acc;
+      color: white;
+      padding: 1rem;
+      font-size: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+    }
+    main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+    #sidebar {
+      width: 250px;
+      background: #fff;
+      border-right: 1px solid #ccc;
+      overflow-y: auto;
+      padding: 1rem;
+    }
+    #sidebar button {
+      display: block;
+      width: 100%;
+      margin-bottom: 0.5rem;
+      padding: 0.5rem;
+      background: #eee;
+      border: none;
+      text-align: left;
+      cursor: pointer;
+    }
+    #sidebar button.active {
+      background: #007acc;
+      color: white;
+    }
+    #editor {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 1rem;
+      background: #fff;
+    }
+    #editor textarea {
+      flex: 1;
+      width: 100%;
+      padding: 1rem;
+      font-family: monospace;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      margin-bottom: 1rem;
+    }
+    #preview {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      border: 1px solid #ccc;
+      background: #f9f9f9;
+    }
+    #controls {
+      display: flex;
+      gap: 0.5rem;
+    }
+    #controls button {
+      padding: 0.5rem 1rem;
+    }
+  </style>
 </head>
 <body>
-
-<header>
-  <h1>Pro Wiki</h1>
-  <button id="logoutBtn" aria-label="Logout">Logout</button>
-</header>
-
-<main>
-  <nav id="sidebar" aria-label="Wiki pages sidebar">
-    <header>Pages</header>
-    <input type="text" id="searchInput" placeholder="Search pages..." aria-label="Search pages" />
-    <div id="pageList" role="list" aria-live="polite" aria-relevant="additions removals"></div>
-    <button id="btnNewPage" disabled aria-disabled="true" aria-label="Create new page">+ New Page</button>
-  </nav>
-
-  <section id="contentArea" tabindex="0" aria-live="polite">
-    <h2 id="pageTitle" tabindex="0">Select or create a page</h2>
-    <article id="pageContent" tabindex="0"></article>
-    <button id="editPageBtn" style="display:none;" aria-label="Edit page content">Edit Page</button>
-  </section>
-</main>
-
-<!-- Edit Page Modal -->
-<div id="editModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="editModalTitle" aria-describedby="editModalDesc">
-  <div class="modal-content">
-    <h2 id="editModalTitle">Edit Page</h2>
-    <label for="editorTextArea">Page Content (Markdown Supported):</label>
-    <textarea id="editorTextArea" spellcheck="false" aria-multiline="true" aria-label="Page content editor"></textarea>
-    <div id="editorPreview" aria-live="polite" aria-atomic="true"></div>
-    <div class="modal-buttons">
-      <button id="btnCancel" aria-label="Cancel editing">Cancel</button>
-      <button id="btnSave" aria-label="Save page content">Save</button>
+  <header>
+    <span>MiniWiki</span>
+    <button onclick="addPage()">+ New Page</button>
+  </header>
+  <main>
+    <div id="sidebar"></div>
+    <div id="editor">
+      <div id="controls">
+        <input type="text" id="pageTitle" placeholder="Page Title" />
+        <button onclick="savePage()">Save</button>
+        <button onclick="deletePage()">Delete</button>
+      </div>
+      <textarea id="pageContent" placeholder="Write your content in markdown..."></textarea>
+      <div id="preview"></div>
     </div>
-  </div>
-</div>
+  </main>
+  <script>
+    let pages = JSON.parse(localStorage.getItem("miniwiki_pages") || '{}');
+    let current = null;
 
-<!-- Login Modal -->
-<div id="loginModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="loginModalTitle">
-  <div class="modal-content">
-    <h2 id="loginModalTitle">Login to Pro Wiki</h2>
-    <form id="loginForm" autocomplete="off">
-      <label for="loginUsername">Username</label>
-      <input type="text" id="loginUsername" name="username" required aria-required="true" />
-      <label for="loginPassword">Password</label>
-      <input type="password" id="loginPassword" name="password" required aria-required="true" />
-      <div class="error-message" id="loginError" role="alert" aria-live="assertive"></div>
-      <div style="margin-top: 1rem; display:flex; justify-content: flex-end; gap: 1rem;">
-        <button type="submit" aria-label="Submit login form">Login</button>
-        <button type="button" id="showRegister" aria-label="Switch to registration form">Register</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Register Modal -->
-<div id="registerModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="registerModalTitle">
-  <div class="modal-content">
-    <h2 id="registerModalTitle">Register new account</h2>
-    <form id="registerForm" autocomplete="off">
-      <label for="registerUsername">Choose Username</label>
-      <input type="text" id="registerUsername" name="username" required aria-required="true" />
-      <label for="registerPassword">Choose Password</label>
-      <input type="password" id="registerPassword" name="password" required aria-required="true" />
-      <div class="error-message" id="registerError" role="alert" aria-live="assertive"></div>
-      <div style="margin-top: 1rem; display:flex; justify-content: flex-end; gap: 1rem;">
-        <button type="submit" aria-label="Submit registration form">Register</button>
-        <button type="button" id="showLogin" aria-label="Switch to login form">Back to Login</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- Toast Notification -->
-<div id="toast" role="alert" aria-live="assertive"></div>
-
-<script>
-(() => {
-  "use strict";
-
-  // Data keys
-  const USERS_KEY = 'prowiki_users';
-  const PAGES_KEY = 'prowiki_pages';
-  const SESSION_KEY = 'prowiki_session';
-
-  // DOM Elements
-  const logoutBtn = document.getElementById('logoutBtn');
-  const btnNewPage = document.getElementById('btnNewPage');
-  const pageListEl = document.getElementById('pageList');
-  const searchInput = document.getElementById('searchInput');
-  const pageTitleEl = document.getElementById('pageTitle');
-  const pageContentEl = document.getElementById('pageContent');
-  const editPageBtn = document.getElementById('editPageBtn');
-  const editModal = document.getElementById('editModal');
-  const editorTextArea = document.getElementById('editorTextArea');
-  const editorPreview = document.getElementById('editorPreview');
-  const btnCancel = document.getElementById('btnCancel');
-  const btnSave = document.getElementById('btnSave');
-  const toastEl = document.getElementById('toast');
-
-  // Login/Register modal & elements
-  const loginModal = document.getElementById('loginModal');
-  const loginForm = document.getElementById('loginForm');
-  const loginError = document.getElementById('loginError');
-  const showRegisterBtn = document.getElementById('showRegister');
-  const registerModal = document.getElementById('registerModal');
-  const registerForm = document.getElementById('registerForm');
-  const registerError = document.getElementById('registerError');
-  const showLoginBtn = document.getElementById('showLogin');
-  const loginUsernameInput = document.getElementById('loginUsername');
-  const loginPasswordInput = document.getElementById('loginPassword');
-  const registerUsernameInput = document.getElementById('registerUsername');
-  const registerPasswordInput = document.getElementById('registerPassword');
-
-  // Data
-  let users = {};
-  let pages = {};
-  let currentUser = null;
-  let currentPage = null;
-
-  // Markdown rendering - simple support (bold, italics, headers)
-  function renderMarkdown(text) {
-    if (!text) return '';
-    // Escape HTML entities for security
-    text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-    // Simple markdown replacements
-    text = text.replace(/^### (.*)$/gm, '<h3>$1</h3>');
-    text = text.replace(/^## (.*)$/gm, '<h2>$1</h2>');
-    text = text.replace(/^# (.*)$/gm, '<h1>$1</h1>');
-    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
-    text = text.replace(/`(.*?)`/g, '<code>$1</code>');
-    // Convert line breaks to <br>
-    text = text.replace(/\n/g, '<br>');
-
-    return text;
-  }
-
-  // Helpers
-  function saveUsers() {
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  }
-  function savePages() {
-    localStorage.setItem(PAGES_KEY, JSON.stringify(pages));
-  }
-  function saveSession() {
-    if (currentUser) {
-      localStorage.setItem(SESSION_KEY, currentUser.username);
-    } else {
-      localStorage.removeItem(SESSION_KEY);
-    }
-  }
-  function loadUsers() {
-    let data = localStorage.getItem(USERS_KEY);
-    users = data ? JSON.parse(data) : {};
-  }
-  function loadPages() {
-    let data = localStorage.getItem(PAGES_KEY);
-    pages = data ? JSON.parse(data) : {};
-  }
-  function loadSession() {
-    const username = localStorage.getItem(SESSION_KEY);
-    if (username && users[username]) {
-      currentUser = users[username];
-    } else {
-      currentUser = null;
-    }
-  }
-  function showToast(message, type='info', duration=3000) {
-    toastEl.textContent = message;
-    toastEl.className = '';
-    toastEl.classList.add(type);
-    toastEl.style.opacity = '1';
-    setTimeout(() => {
-      toastEl.style.opacity = '0';
-    }, duration);
-  }
-  function sanitizeInput(str) {
-    // Basic sanitization to strip script tags
-    return str.replace(/<script.*?>.*?<\/script>/gi, '');
-  }
-
-  // UI Update Functions
-  function updateUIForAuth() {
-    if (currentUser) {
-      logoutBtn.style.display = 'inline-block';
-      btnNewPage.disabled = false;
-      btnNewPage.setAttribute('aria-disabled', 'false');
-      openPage(currentPage || Object.keys(pages)[0]);
-    } else {
-      logoutBtn.style.display = 'none';
-      btnNewPage.disabled = true;
-      btnNewPage.setAttribute('aria-disabled', 'true');
-      pageTitleEl.textContent = 'Please login to view pages';
-      pageContentEl.innerHTML = '';
-      editPageBtn.style.display = 'none';
-      openLogin();
-    }
-  }
-
-  function renderPageList(filter = '') {
-    pageListEl.innerHTML = '';
-    const pageNames = Object.keys(pages).filter(name =>
-      name.toLowerCase().includes(filter.toLowerCase())
-    ).sort((a,b) => a.localeCompare(b));
-
-    if (pageNames.length === 0) {
-      const noPagesMsg = document.createElement('div');
-      noPagesMsg.style.padding = '1rem';
-      noPagesMsg.style.color = '#888';
-      noPagesMsg.textContent = 'No pages found.';
-      pageListEl.appendChild(noPagesMsg);
-      return;
+    function renderSidebar() {
+      const sidebar = document.getElementById("sidebar");
+      sidebar.innerHTML = "";
+      Object.keys(pages).forEach(title => {
+        const btn = document.createElement("button");
+        btn.textContent = title;
+        if (title === current) btn.classList.add("active");
+        btn.onclick = () => loadPage(title);
+        sidebar.appendChild(btn);
+      });
     }
 
-    pageNames.forEach(name => {
-      const btn = document.createElement('button');
-      btn.textContent = name;
-      btn.className = 'pageItem';
-      btn.setAttribute('role', 'listitem');
-      if (name === currentPage) btn.classList.add('active');
-      btn.onclick = () => openPage(name);
-      pageListEl.appendChild(btn);
-    });
-  }
-
-  function openPage(name) {
-    if (!name || !pages[name]) return;
-    currentPage = name;
-    pageTitleEl.textContent = name;
-    pageContentEl.innerHTML = renderMarkdown(pages[name].content);
-    renderPageList(searchInput.value);
-    if (currentUser) {
-      editPageBtn.style.display = 'inline-block';
-    }
-  }
-
-  function openEditModal() {
-    if (!currentPage || !pages[currentPage]) return;
-    editorTextArea.value = pages[currentPage].content;
-    updateEditorPreview();
-    editModal.classList.add('active');
-    editorTextArea.focus();
-    trapFocus(editModal);
-  }
-
-  function closeEditModal() {
-    editModal.classList.remove('active');
-    releaseFocus();
-  }
-
-  function updateEditorPreview() {
-    const md = editorTextArea.value;
-    editorPreview.innerHTML = renderMarkdown(md);
-  }
-
-  function openLogin() {
-    loginModal.classList.add('active');
-    loginUsernameInput.focus();
-    trapFocus(loginModal);
-  }
-  function closeLogin() {
-    loginModal.classList.remove('active');
-    releaseFocus();
-  }
-  function openRegister() {
-    registerModal.classList.add('active');
-    registerUsernameInput.focus();
-    trapFocus(registerModal);
-  }
-  function closeRegister() {
-    registerModal.classList.remove('active');
-    releaseFocus();
-  }
-
-  // Accessibility: Focus trap inside modal
-  let lastFocusedElement = null;
-  function trapFocus(modal) {
-    lastFocusedElement = document.activeElement;
-    const focusableElementsString = 'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex="0"], [contenteditable]';
-    const focusableElements = modal.querySelectorAll(focusableElementsString);
-    if (focusableElements.length === 0) return;
-
-    let firstFocusable = focusableElements[0];
-    let lastFocusable = focusableElements[focusableElements.length - 1];
-
-    function handleFocus(event) {
-      if (event.key !== 'Tab') return;
-
-      if (event.shiftKey) { // Shift + Tab
-        if (document.activeElement === firstFocusable) {
-          event.preventDefault();
-          lastFocusable.focus();
-        }
-      } else { // Tab
-        if (document.activeElement === lastFocusable) {
-          event.preventDefault();
-          firstFocusable.focus();
-        }
-      }
+    function loadPage(title) {
+      current = title;
+      document.getElementById("pageTitle").value = title;
+      document.getElementById("pageContent").value = pages[title];
+      renderSidebar();
+      renderPreview();
     }
 
-    modal.addEventListener('keydown', handleFocus);
-    modal.dataset.handleFocus = handleFocus;
-    firstFocusable.focus();
-  }
-  function releaseFocus() {
-    const modals = document.querySelectorAll('.modal.active');
-    modals.forEach(modal => {
-      if (modal.dataset.handleFocus) {
-        modal.removeEventListener('keydown', modal.dataset.handleFocus);
-        delete modal.dataset.handleFocus;
-      }
-    });
-    if (lastFocusedElement) lastFocusedElement.focus();
-  }
-
-  // Event Listeners
-  btnNewPage.addEventListener('click', () => {
-    if (!currentUser) {
-      showToast('You must be logged in to create a page', 'error');
-      return;
-    }
-    let newPageName = prompt('Enter new page name (unique):');
-    if (!newPageName) return;
-
-    newPageName = newPageName.trim();
-    if (newPageName.length < 3) {
-      alert('Page name must be at least 3 characters.');
-      return;
-    }
-    if (pages[newPageName]) {
-      alert('Page name already exists.');
-      return;
+    function savePage() {
+      const title = document.getElementById("pageTitle").value.trim();
+      const content = document.getElementById("pageContent").value;
+      if (!title) return alert("Title is required");
+      pages[title] = content;
+      localStorage.setItem("miniwiki_pages", JSON.stringify(pages));
+      current = title;
+      renderSidebar();
+      renderPreview();
     }
 
-    pages[newPageName] = {
-      content: `# ${newPageName}\n\nThis is a new page.`,
-      createdBy: currentUser.username,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    savePages();
-    currentPage = newPageName;
-    renderPageList(searchInput.value);
-    openPage(newPageName);
-    showToast(`Page "${newPageName}" created`, 'success');
-  });
-
-  editPageBtn.addEventListener('click', () => {
-    if (!currentUser) {
-      showToast('You must be logged in to edit a page', 'error');
-      return;
+    function deletePage() {
+      if (!current) return;
+      if (!confirm("Delete this page?")) return;
+      delete pages[current];
+      localStorage.setItem("miniwiki_pages", JSON.stringify(pages));
+      current = null;
+      document.getElementById("pageTitle").value = "";
+      document.getElementById("pageContent").value = "";
+      document.getElementById("preview").innerHTML = "";
+      renderSidebar();
     }
-    openEditModal();
-  });
 
-  btnCancel.addEventListener('click', () => {
-    closeEditModal();
-  });
-
-  btnSave.addEventListener('click', () => {
-    const newContent = sanitizeInput(editorTextArea.value.trim());
-    if (!newContent) {
-      alert('Page content cannot be empty.');
-      return;
+    function addPage() {
+      document.getElementById("pageTitle").value = "";
+      document.getElementById("pageContent").value = "";
+      current = null;
     }
-    if (!currentPage) return;
 
-    pages[currentPage].content = newContent;
-    pages[currentPage].updatedAt = Date.now();
-    savePages();
-    openPage(currentPage);
-    closeEditModal();
-    showToast(`Page "${currentPage}" saved`, 'success');
-  });
-
-  searchInput.addEventListener('input', () => {
-    renderPageList(searchInput.value);
-  });
-
-  logoutBtn.addEventListener('click', () => {
-    currentUser = null;
-    saveSession();
-    updateUIForAuth();
-    showToast('Logged out', 'info');
-  });
-
-  // Login/Register Forms
-  loginForm.addEventListener('submit', e => {
-    e.preventDefault();
-    const username = loginUsernameInput.value.trim();
-    const password = loginPasswordInput.value;
-    if (!username || !password) {
-      loginError.textContent = 'Please enter username and password.';
-      return;
+    function renderPreview() {
+      let text = document.getElementById("pageContent").value;
+      text = text.replace(/\n/g, "<br>")
+                 .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                 .replace(/\*(.*?)\*/g, "<em>$1</em>")
+                 .replace(/\`(.*?)\`/g, "<code>$1</code>");
+      document.getElementById("preview").innerHTML = text;
     }
-    if (!users[username]) {
-      loginError.textContent = 'User not found.';
-      return;
-    }
-    if (users[username].password !== password) {
-      loginError.textContent = 'Incorrect password.';
-      return;
-    }
-    currentUser = users[username];
-    saveSession();
-    closeLogin();
-    updateUIForAuth();
-    showToast(`Welcome back, ${currentUser.username}!`, 'success');
-    loginForm.reset();
-    loginError.textContent = '';
-  });
 
-  registerForm.addEventListener('submit', e => {
-    e.preventDefault();
-    const username = registerUsernameInput.value.trim();
-    const password = registerPasswordInput.value;
-    if (username.length < 3) {
-      registerError.textContent = 'Username must be at least 3 characters.';
-      return;
-    }
-    if (password.length < 5) {
-      registerError.textContent = 'Password must be at least 5 characters.';
-      return;
-    }
-    if (users[username]) {
-      registerError.textContent = 'Username already taken.';
-      return;
-    }
-    users[username] = { username, password };
-    saveUsers();
-    showToast(`User "${username}" registered! You can now login.`, 'success');
-    registerForm.reset();
-    registerError.textContent = '';
-    closeRegister();
-    openLogin();
-  });
+    document.getElementById("pageContent").addEventListener("input", renderPreview);
 
-  showRegisterBtn.addEventListener('click', () => {
-    closeLogin();
-    openRegister();
-  });
-
-  showLoginBtn.addEventListener('click', () => {
-    closeRegister();
-    openLogin();
-  });
-
-  // Init default user and page if none exist
-  function initDefaults() {
-    if (Object.keys(users).length === 0) {
-      // Create default admin user: admin/admin
-      users['admin'] = { username: 'admin', password: 'admin' };
-      saveUsers();
-      showToast('Default user created: admin / admin', 'info', 5000);
-    }
-    if (Object.keys(pages).length === 0) {
-      // Create a welcome page
-      pages['Welcome'] = {
-        content: `# Welcome to Pro Wiki!\n\nThis is the first page. Feel free to edit or create new pages.`,
-        createdBy: 'system',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      };
-      savePages();
-    }
-  }
-
-  // Keyboard accessibility: Escape key closes modals
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') {
-      if (editModal.classList.contains('active')) closeEditModal();
-      if (loginModal.classList.contains('active')) closeLogin();
-      if (registerModal.classList.contains('active')) closeRegister();
-    }
-  });
-
-  // Initialize
-  loadUsers();
-  loadPages();
-  loadSession();
-  initDefaults();
-  updateUIForAuth();
-  renderPageList();
-
-})();
-</script>
+    renderSidebar();
+  </script>
+</body>
+</html>
